@@ -1,3 +1,4 @@
+import os
 import logging
 import numpy as np
 from scipy.spatial.distance import cdist
@@ -21,26 +22,69 @@ def _check_if_coordinates_are_unique(data):
                         '\nYou may get wrong impression of a nugget effect. Clean your data before processing.')
 
 
-def calc_point_to_point_distance(points_a, points_b=None):
+def calc_large_arrays(arr1, arr2):
+    """
+    Function calculates distances for very large arrays of points.
+
+    INPUT:
+
+    :param arr1: (numpy array),
+    :param arr2: (numpy array).
+
+    OUTPUT:
+
+    :return: (numpy array) distances list from every point from arr1 to every other point in arr2.
+    """
+
+    f = np.memmap('memmapped.dat', dtype=np.float32, mode='w+', shape=(len(arr1), len(arr2)))
+    step = 1000
+
+    for x in range(0, len(arr2), step):
+        x1 = x + step
+        if x1 > len(arr2):
+            x1 = len(arr2)
+        d = cdist(arr1, arr2[x:x1, :])
+        f[:, x:x1] = d
+
+    del f
+
+    output = np.memmap('memmapped.dat', dtype=np.float32, shape=(len(arr1), len(arr2)))
+    os.remove('memmapped.dat')
+    return output
+
+
+def calc_point_to_point_distance(points_a, points_b=None, experimental=False):
     """Function calculates distances between all points in the given array.
 
     INPUT:
 
     :param points_a: (numpy array) points coordinates,
     :param points_b: (numpy array) points coordinates, default is None. If None then distance between all points in
-        points_a is calculated.
+        points_a is calculated,
+    :param experimental: (bool) if True then very large arrays of observations are processed.
 
     OUTPUT:
 
     :return: numpy array of distances between all coordinates."""
 
-    t = _check_if_coordinates_are_unique(points_a)  # Test redundant observations
+    _check_if_coordinates_are_unique(points_a)  # Test redundant observations
 
     if points_b is None:
-        distances = cdist(points_a, points_a, 'euclidean')
+        points_b = points_a
     else:
-        t = _check_if_coordinates_are_unique(points_b)  # Test redundant observations
+        _check_if_coordinates_are_unique(points_b)  # Test redundant observations
+
+    # EXPERIMENTAL
+    if experimental:
+        try:
+            distances = cdist(points_a, points_b, 'euclidean')
+        except MemoryError:
+            logging.info('Passed array of points is too big to perform distance calculations at once,\n'
+                         'it will be divided into smaller parts.')
+            distances = calc_large_arrays(points_a, points_b)
+    else:
         distances = cdist(points_a, points_b, 'euclidean')
+
     return distances
 
 
