@@ -6,8 +6,8 @@ from pyinterpolate.kriging.areal_poisson_kriging.area_to_point.atp_poisson_krigi
 from pyinterpolate.semivariance.semivariogram_estimation.calculate_semivariance import calculate_weighted_semivariance
 from pyinterpolate.semivariance.semivariogram_fit.fit_semivariance import TheoreticalSemivariogram
 
-from pyinterpolate.io_ops.prepare_areal_shapefile import prepare_areal_shapefile
-from pyinterpolate.io_ops.get_points_within_area import get_points_within_area
+from pyinterpolate.io.prepare_areal_shapefile import prepare_areal_shapefile
+from pyinterpolate.io.get_points_within_area import get_points_within_area
 from pyinterpolate.transform.set_areal_weights import set_areal_weights
 
 class TestAreaToPointPoissonKriging(unittest.TestCase):

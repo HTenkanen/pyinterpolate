@@ -2,7 +2,7 @@ import unittest
 import os
 import numpy as np
 from numpy.testing import assert_almost_equal
-from pyinterpolate.io_ops.read_data import read_point_data
+from pyinterpolate.io.read_data import read_point_data
 from pyinterpolate.distance.calculate_distances import calc_point_to_point_distance
 from pyinterpolate.semivariance.semivariogram_estimation.calculate_semivariance import calculate_semivariance
 from pyinterpolate.semivariance.semivariogram_estimation.calculate_semivariance import calculate_weighted_semivariance

@@ -22,7 +22,8 @@ def prepare_areal_shapefile(areal_file_address,
 
     OUTPUT:
 
-    :return: (gpd.GeoDataFrame)
+    :return: (gpd.GeoDataFrame) with columns:
+        ['geometry', 'area.id', 'area.value', 'area.centroid', 'area.centroid.x', 'area.centroid.y]
     """
 
     # Test if value column name is None and dropnans is True
@@ -49,9 +50,13 @@ def prepare_areal_shapefile(areal_file_address,
 
     # Now get centroids
     gdf['area.centroid'] = gdf.centroid
+    gdf['area.centroid.x'] = gdf['area.centroid'].x
+    gdf['area.centroid.y'] = gdf['area.centroid'].y
 
     # Now remove nans
     if dropnans:
         gdf.dropna(axis=0, inplace=True, how='any')
+
+    gdf.columns = ['geometry', 'area.id', 'area.value', 'area.centroid', 'area.centroid.x', 'area.centroid.y']
 
     return gdf

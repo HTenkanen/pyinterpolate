@@ -36,9 +36,9 @@ Package allows o perform multiple spatial interpolation tasks. The flow of analy
 **[1.]** Read and prepare data.
 
 ```python
-from pyinterpolate.io_ops import read_point_data
+from pyinterpolate.io import read_txt
 
-point_data = read_point_data('xyz_txt_file.txt')
+point_data = read_txt('xyz_txt_file.txt')
 ```
 
 **[2.]** Analyze data, Semivariance calculation.

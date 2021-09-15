@@ -1,7 +1,7 @@
 import unittest
 import os
 import numpy as np
-from pyinterpolate.io_ops.read_data import read_point_data
+from pyinterpolate.io.read_data import read_point_data
 from pyinterpolate.distance.calculate_distances import calc_point_to_point_distance
 from pyinterpolate.semivariance.semivariogram_estimation.calculate_covariance import calculate_covariance
 

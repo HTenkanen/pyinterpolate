@@ -1,3 +1,4 @@
+import geopandas as gpd
 import numpy as np
 
 from pyinterpolate.transform.prepare_kriging_data import prepare_ata_known_areas
@@ -54,17 +55,15 @@ class AtAPoissonKriging:
         """
 
         :param regularized_model: (RegularizedSemivariogram object) Semivariogram model after deconvolution procedure,
-        :param known_areas: (numpy array) array of areas in the form:
-            [area_id, areal_polygon, centroid coordinate x, centroid coordinate y, value]
-        :param known_areas_points: (numpy array) array of points within areas in the form:
-            [area_id, [point_position_x, point_position_y, value]]
+        :param known_areas: (GeoDataFrame) with columns:
+            ['geometry', 'area.id', 'area.value', 'area.centroid', 'area.centroid.x', 'area.centroid.y],
+        :param known_areas_points: (dict) of points within areas in the form:
+            {area_id, [point_position_x, point_position_y, value]}
         """
 
         self.model = regularized_model
         self.known_areas = known_areas
-        self.known_areas = self.known_areas[self.known_areas[:, 0].argsort()]  # Sort by id
         self.known_areas_points = known_areas_points
-        self.known_areas_points = self.known_areas_points[self.known_areas_points[:, 0].argsort()]  # Sort by id
 
         self.block_to_block_smv = None
         self.prepared_data = None
@@ -73,8 +72,8 @@ class AtAPoissonKriging:
                 number_of_neighbours, max_search_radius):
         """
         Function predicts areal value in a unknown location based on the centroid-based Poisson Kriging
-        :param unknown_location_points: (numpy array) array of points within an unknown area in the form:
-            [area_id, [point_position_x, point_position_y, value]]
+        :param unknown_location_points: (dict) of points within areas in the form:
+            {area_id, [point_position_x, point_position_y, value]}
         :param number_of_neighbours: (int) minimum number of neighbours to include in the algorithm,
         :param max_search_radius: (float) maximum search radius (if number of neighbours within this search radius is
             smaller than number_of_neighbours parameter then additional neighbours are included up to number of
@@ -85,8 +84,10 @@ class AtAPoissonKriging:
 
         self.prepared_data = prepare_ata_data(
             points_within_unknown_area=unknown_location_points,
-            known_areas=self.known_areas, points_within_known_areas=self.known_areas_points,
-            number_of_neighbours=number_of_neighbours, max_search_radius=max_search_radius
+            known_areas=self.known_areas,
+            points_within_known_areas=self.known_areas_points,
+            number_of_neighbours=number_of_neighbours,
+            max_search_radius=max_search_radius
         )  # [id (known), val, [known pt val, unknown pt val, distance between points], total points value]
 
         self.block_to_block_smv = WeightedBlock2BlockSemivariance(semivariance_model=self.model)

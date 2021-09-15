@@ -2,8 +2,8 @@ import unittest
 import os
 import numpy as np
 import geopandas as gpd
-from pyinterpolate.io_ops.prepare_areal_shapefile import prepare_areal_shapefile
-from pyinterpolate.io_ops.get_points_within_area import get_points_within_area
+from pyinterpolate.io.prepare_areal_shapefile import prepare_areal_shapefile
+from pyinterpolate.io.get_points_within_area import get_points_within_area
 from pyinterpolate.transform.set_areal_weights import set_areal_weights
 from pyinterpolate.kriging.areal_poisson_kriging.centroid_based.centroid_poisson_kriging import CentroidPoissonKriging
 from pyinterpolate.semivariance.semivariogram_estimation.calculate_semivariance import calculate_weighted_semivariance
