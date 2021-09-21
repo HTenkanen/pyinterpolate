@@ -25,7 +25,7 @@ def read_txt(
 
     data_arr = np.loadtxt(path, delimiter=delim)
 
-    gdf = gpd.GeoDataFrame(data=data_arr, columns=['y', 'x', 'val'])
+    gdf = gpd.GeoDataFrame(data=data_arr, columns=['y', 'x', 'value'])
     gdf['geometry'] = points_from_xy(gdf['x'], gdf['y'])
     gdf.set_geometry('geometry', inplace=True)
 
@@ -34,4 +34,4 @@ def read_txt(
     else:
         gdf.set_crs(crs=crs, inplace=True)
 
-    return gdf[['geometry', 'val']]
+    return gdf[['geometry', 'value']]

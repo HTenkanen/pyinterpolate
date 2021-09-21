@@ -1,7 +1,6 @@
 import unittest
 import os
 import geopandas as gpd
-import numpy as np
 from pyinterpolate.io.read_data import read_txt
 
 
@@ -18,10 +17,12 @@ class TestReadData(unittest.TestCase):
 		self.assertTrue(check_ndarray, "Instance of a data type should be geopandas GeoDataFrame")
 
 		# Check if geometry is valid
-		is_valid_geometry = data.
+		is_valid_geometry = data.geometry.is_valid.all()
+		self.assertTrue(is_valid_geometry, "Geometry is not valid! Dataset is corrupted.")
 
-		# Check dimensions
-		self.assertEqual(data.shape[1], 3, "Shape of data should be 3 - x, y, value")
+		# Check if there is value column
+		is_value_column = 'value' in data.columns
+		self.assertTrue(is_value_column, "Value column has not been created, it's an error!")
 
 
 if __name__ == '__main__':

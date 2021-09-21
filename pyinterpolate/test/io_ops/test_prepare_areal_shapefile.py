@@ -13,26 +13,20 @@ class TestPrepareArealShapefile(unittest.TestCase):
 
         # Read without id column and without value column
         try:
-            minimal_dataset = prepare_areal_shapefile(path_to_areal_file)
+            _ = prepare_areal_shapefile(path_to_areal_file)
         except TypeError:
             assert True
         else:
             assert False
 
-        minimal_dataset = prepare_areal_shapefile(path_to_areal_file, value_column_name='value')
-
-        # Tests:
-        # Last column values are not nan
-        isnan_test = ~np.any(np.isnan(minimal_dataset[:, -1].astype(np.float)))
-        self.assertTrue(isnan_test, "NaN values in last column")
-
         # Read with id column
         dataset_with_id = prepare_areal_shapefile(path_to_areal_file, id_column_name='id', dropnans=False)
 
         # Tests:
-        # Must have 5 columns
-        test_cols_dataset = len(dataset_with_id[0]) == 5
-        self.assertTrue(test_cols_dataset, "Dataset should have 5 columns")
+        # Must have 6 columns: geometry, area.id, area.value, area.centroid, area.centroid.x, area.centroid.y
+        test_cols_dataset = len(dataset_with_id.columns) == 6
+        self.assertTrue(test_cols_dataset, "Dataset should have 6 columns:"
+                                           "[geometry, area.id, area.value, area.centroid, area.centroid.x, area.centroid.y]")
 
 
 if __name__ == '__main__':
