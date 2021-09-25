@@ -41,7 +41,7 @@ class TestAreaToAreaPoissonKriging(unittest.TestCase):
 
         # Get one area as unknown
         unknown_area_id = 1
-        u_points = points_in_area[unknown_area_id]
+        u_points = {unknown_area_id: points_in_area[unknown_area_id]}  # Dict {area id: points}
 
         k_areas = areal_data_prepared[areal_data_prepared['area.id'] != unknown_area_id]
         k_points = {k: points_in_area[k] for k in points_in_area.keys() if k != unknown_area_id}
@@ -58,7 +58,7 @@ class TestAreaToAreaPoissonKriging(unittest.TestCase):
 
         # Poisson Kriging
 
-        search_radius = max_range / 2
+        search_radius = 0.75 * max_range
         number_of_observations = 3
 
         pkc = AtAPoissonKriging(regularized_model=semivariogram,

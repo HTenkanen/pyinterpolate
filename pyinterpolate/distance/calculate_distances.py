@@ -1,5 +1,6 @@
 import logging
 import numpy as np
+import pandas as pd
 from scipy.spatial.distance import cdist
 
 
@@ -85,44 +86,32 @@ def _calculate_block_to_block_distance(area_block_1, area_block_2):
     return distances_sum
 
 
-def calc_block_to_block_distance(areas):
+def calc_block_to_block_distance(areas: dict):
     """
     Function calculates distances between blocks based on the population points within the block.
 
     INPUT:
 
-    :param areas: numpy array or Python list of lists of areal id's and coordinates per each id [area id, [x, y, val]].
+    :param areas: dict areal id's and coordinates per each id {area id: [x, y, val]}.
 
     OUTPUT:
 
-    :return: areal distances - tuple of arrays with matrix with areal distances and ids of each row of distances:
-
-    (0): [[dist(id0:id0), ..., dist(id0:id99)], ..., [dist(id99:id0), ..., dist(id99:id99)]]
-
-    (1): [id0, id1, ..., id999]
-
+    :return: areal distances: (DataFrame) matrix where rows/cols are areas ids and values are distances between blocks
     """
 
-    dist_array = np.zeros(shape=(len(areas), len(areas)))
-    idx = 0
-    id_row = []
+    areas_keys = areas.keys()
 
-    for area in areas:
-        other_idx = idx
-        for other_area in areas[idx:]:
-            if idx == other_idx:
-                val = 0
+    distances_matrix = pd.DataFrame(index=areas_keys, columns=areas_keys)
+
+    for area_a_id in areas_keys:
+        for area_b_id in areas_keys:
+            if area_a_id == area_b_id:
+                distances_matrix.at[area_a_id, area_b_id] = 0
+                distances_matrix.at[area_b_id, area_a_id] = 0
             else:
-                try:
-                    a1 = area[1]
-                    a2 = other_area[1]
-                except IndexError:
-                    a1 = area[0][1]
-                    a2 = other_area[0][1]
-                val = _calculate_block_to_block_distance(a1, a2)
-            dist_array[other_idx, idx] = val
-            dist_array[idx:, other_idx] = val
-            other_idx = other_idx + 1
-        id_row.append(area[0])
-        idx = idx + 1
-    return dist_array, id_row
+                # Calculate distance
+                val = _calculate_block_to_block_distance(areas[area_a_id], areas[area_b_id])
+                distances_matrix.at[area_a_id, area_b_id] = val
+                distances_matrix.at[area_b_id, area_a_id] = val
+
+    return distances_matrix

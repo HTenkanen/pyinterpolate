@@ -39,12 +39,7 @@ class WeightedBlock2BlockSemivariance:
         """
         k = []
         for prediction_input in data_points:
-            w_sem_sum = 0
-            w_sem_weights_sum = 0
-            for single_area in prediction_input:
-                w_sem = self._avg_smv(single_area)
-                w_sem_sum = w_sem_sum + w_sem[0]
-                w_sem_weights_sum = w_sem_weights_sum + w_sem[1]
+            w_sem_sum, w_sem_weights_sum = self._avg_smv(prediction_input)
             k.append(w_sem_sum / w_sem_weights_sum)
         return np.array(k)
 
@@ -82,18 +77,31 @@ class AtAPoissonKriging:
             [value in unknown location, error, estimated mean, weights]
         """
 
+        # self.prepared_data:
+        """
+        output_d = {
+            area id: {
+                area.value: float,
+                total.value: float,
+                array: numpy array of points [known point value, unknown point value, distance]
+                }
+            }
+        """
+
         self.prepared_data = prepare_ata_data(
             points_within_unknown_area=unknown_location_points,
             known_areas=self.known_areas,
             points_within_known_areas=self.known_areas_points,
             number_of_neighbours=number_of_neighbours,
             max_search_radius=max_search_radius
-        )  # [id (known), val, [known pt val, unknown pt val, distance between points], total points value]
+        )  # {id (known), val, [known pt val, unknown pt val, distance between points], total points value]
 
         self.block_to_block_smv = WeightedBlock2BlockSemivariance(semivariance_model=self.model)
 
+        key = list(self.prepared_data.keys())[0]
+
         # Calculate Average Point to Point semivariance for each area - len of dataset
-        areas_and_points = self.prepared_data[:, 2]
+        areas_and_points = self.prepared_data[key]['array']
         k = self.block_to_block_smv.calculate_average_semivariance(areas_and_points)
         k = k.T
         k_ones = np.ones(1)[0]
@@ -101,23 +109,7 @@ class AtAPoissonKriging:
 
         # Calculate block to block average semivariance between known areas
 
-        # Prepare areas blocks for calculation
-
-        block_ids = self.prepared_data[:, 0]
-
-        points_of_interest = []
-        for area_id in block_ids:
-            points_of_interest.append(self.known_areas_points[self.known_areas_points[:, 0] == area_id])
-
-        # Calculate distances between blocks / prepare data for prediction
-        # [id base,
-        #     [
-        #         id other,
-        #         [base point value, other point value, distance between points]
-        #     ]
-        #  ]
-
-        distances_of_chosen_areas = prepare_ata_known_areas(points_of_interest)
+        distances_of_chosen_areas = prepare_ata_known_areas(self.prepared_data)
 
         predicted = self._calculate_avg_semivars_between_known(distances_of_chosen_areas)
 

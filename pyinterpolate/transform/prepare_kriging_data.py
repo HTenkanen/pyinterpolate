@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+
 from pyinterpolate.distance.calculate_distances import calc_point_to_point_distance,\
     calc_block_to_block_distance
 from pyinterpolate.transform.set_areal_weights import get_total_value_of_area
@@ -150,62 +152,83 @@ def prepare_ata_data(points_within_unknown_area,
 
     OUTPUT:
 
-    :return output_data: (numpy array) distances from known locations to the unknown location: [id (known),
-        areal value - count, [known_point_1 value, unknown_point_1 value, distance_1], total point value].
+    :return output_data: (dict) distances from known locations to the unknown location:
+        {area id:
+            {area.value: float,
+            total.value: float,
+            array: numpy array of points [known point value, unknown point value, distance]
+            }
+        }
     """
 
     # Initialize set
 
-    kriging_areas_ids = known_areas[:, 0]
-    kriging_areal_values = known_areas[:, -1]
+    kriging_data = known_areas[['area.id', 'area.value']].copy()
+    kriging_data.set_index('area.id', inplace=True)
 
     # Build set for Area to Area Poisson Kriging - sort areas with distance
 
-    known_areas_pts = points_within_known_areas.copy()
+    dists = {}  # [id_known, dist to unknown]
+    unknown_key = list(points_within_unknown_area.keys())[0]
 
-    dists = []  # [id_known, dist to unknown]
+    for area_id in points_within_known_areas:
+        # Pass Dict with the known areas points and unknown areas points
+        datadict = points_within_unknown_area.copy()
+        datadict[area_id] = points_within_known_areas[area_id]
+        d = calc_block_to_block_distance(datadict)
+        dists[area_id] = d.loc[area_id, unknown_key]
 
-    for pt in known_areas_pts:
-        d = calc_block_to_block_distance([pt, points_within_unknown_area])
-        dists.append([d[0][0][1]])
-    s = np.ravel(np.array(dists)).T
-    kriging_data = np.c_[kriging_areas_ids, kriging_areal_values, s]  # [id, areal val, dist_to_unkn]
+    dists = pd.DataFrame.from_dict(dists, orient='index', columns=['distance'])
+    kriging_data = kriging_data.join(dists)
+    # s = np.ravel(np.array(dists)).T
+    # kriging_data = np.c_[kriging_areas_ids, kriging_areal_values, s]  # [id, areal val, dist_to_unkn]
 
     # sort by distance
-    kriging_data = kriging_data[kriging_data[:, -1].argsort()]
+    kriging_data = kriging_data.sort_values('distance')
 
-    # Get distances in max search radius
-    max_search_pos = np.argmax(kriging_data[:, -1] > max_search_radius)
-    output_data = kriging_data[:max_search_pos]
+    # Get distances within max search radius
+    output_data = kriging_data[kriging_data['distance'] < max_search_radius]
 
     # check number of observations
 
     if len(output_data) < number_of_neighbours:
-        output_data = kriging_data[:number_of_neighbours]
+        output_data = kriging_data.iloc[:number_of_neighbours]
 
     # for each of prepared id prepare distances list with points' weights for semivariogram calculation
 
-    points_vals = []
-    points_in_unknown_area = points_within_unknown_area[1][:, :-1]
-    vals_in_unknown_area = points_within_unknown_area[1][:, -1]
-    for rec in output_data:
-        areal_id = rec[0]
-        areal_value = rec[1]
-        known_area = points_within_known_areas[points_within_known_areas[:, 0] == areal_id]
-        known_area = known_area[0]
-        points_in_known_area = known_area[1][:, :-1]
-        vals_in_known_area = known_area[1][:, -1]
-        distances_array = calc_point_to_point_distance(points_in_known_area, points_in_unknown_area)
-        merged = _merge_vals_and_distances(vals_in_known_area, vals_in_unknown_area, distances_array)
-        total_val = np.sum(known_area[1][:, 2])
-        generated_array = [areal_id, areal_value, merged, total_val]  # [id, value, [known point value,
-                                                                      #              unknown point value,
-                                                                      #              distance between points],
-                                                                      #              total point value]
-        points_vals.append(generated_array)
+    points_in_unknown_area = points_within_unknown_area[unknown_key][:, :-1]
+    vals_in_unknown_area = points_within_unknown_area[unknown_key][:, -1]
 
-    output_data = np.array(points_vals)
-    return output_data
+    output_d = {}
+
+    # Now get distances between all points area-to-area
+    for area_id in output_data.index:
+        known_points = points_within_known_areas[area_id][:, :-1]
+        known_values = points_within_known_areas[area_id][:, -1]
+        distances = calc_point_to_point_distance(points_a=known_points,
+                                                 points_b=points_in_unknown_area)
+        # Prepare Output
+        merged = _merge_vals_and_distances(known_values, vals_in_unknown_area, distances)  # [known point value,
+                                                                                           #  unknown point value,
+                                                                                           #  distance between points]
+        total_val = np.sum(known_values)
+        output_d[area_id] = {
+            'area.value': output_data['area.value'].loc[area_id],
+            'total.value': total_val,
+            'array': merged
+        }
+
+        """
+        output_d = {
+            area id: {
+                area.value: float,
+                total.value: float,
+                array: numpy array of points [known point value, unknown point value, distance]
+                }
+            }
+        """
+
+    return output_d
 
 
 def prepare_ata_known_areas(list_of_points_of_known_areas):
@@ -214,28 +237,28 @@ def prepare_ata_known_areas(list_of_points_of_known_areas):
 
     INPUT:
 
-    :param list_of_points_of_known_areas: (numpy array) list of all areas' points and their values used for the
-        prediction.
+    :param list_of_points_of_known_areas: (dict) {
+            area id: {
+                area.value: float,
+                total.value: float,
+                array: numpy array of points [known point value, unknown point value, distance]
+                }
+            }
 
     OUTPUT:
 
-    :return: (numpy array) list of arrays with areas and distances between them:
-        [id base, [id other, [base point value, other point value,  distance between points]]].
+    :return: (dict) list of arrays with areas and distances between them:
+        {id base: {id other: [base point value, other point value,  distance between points]}}
     """
-    all_distances_list = []
-    for pt1 in list_of_points_of_known_areas:
+    keys = list_of_points_of_known_areas.keys()
+    all_distances_dict = []
+    for k1 in keys:
+        points_in_base_area = list_of_points_of_known_areas[k1]['array'][:, :-1]
+        vals_in_base_area = list_of_points_of_known_areas[k1]['array'][:, -1]
 
-        id_base = pt1[0][0]
-        list_of_distances_from_base = [id_base, []]
-
-        points_in_base_area = pt1[0][1][:, :-1]
-        vals_in_base_area = pt1[0][1][:, -1]
-
-        for pt2 in list_of_points_of_known_areas:
-
-            id_other = pt2[0][0]
-            points_in_other_area = pt2[0][1][:, :-1]
-            vals_in_other_area = pt2[0][1][:, -1]
+        for k2 in keys:
+            points_in_other_area = list_of_points_of_known_areas[k2]['array'][:, :-1]
+            vals_in_other_area = list_of_points_of_known_areas[k2]['array'][:, -1]
 
             distances_array = calc_point_to_point_distance(points_in_base_area, points_in_other_area)
             merged = _merge_vals_and_distances(vals_in_base_area, vals_in_other_area, distances_array)
