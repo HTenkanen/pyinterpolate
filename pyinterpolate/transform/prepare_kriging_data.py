@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from collections import defaultdict
 
 from pyinterpolate.distance.calculate_distances import calc_point_to_point_distance,\
     calc_block_to_block_distance
@@ -126,8 +127,8 @@ def _merge_vals_and_distances(known_vals, unknown_vals, distances_array):
     """
     output = []
     for k_idx, value in enumerate(known_vals):
-        output_list = [[value, x, distances_array[k_idx, u_idx]] for u_idx, x in enumerate(unknown_vals)]
-        output.append(output_list)
+        for u_idx, u_value in enumerate(unknown_vals):
+            output.append([value, u_value, distances_array[k_idx, u_idx]])
     output_arr = np.array(output)
     return output_arr
 
@@ -251,8 +252,10 @@ def prepare_ata_known_areas(list_of_points_of_known_areas):
         {id base: {id other: [base point value, other point value,  distance between points]}}
     """
     keys = list_of_points_of_known_areas.keys()
-    all_distances_dict = []
+    all_distances_dict = dict()
+
     for k1 in keys:
+        all_distances_dict[k1] = defaultdict()
         points_in_base_area = list_of_points_of_known_areas[k1]['array'][:, :-1]
         vals_in_base_area = list_of_points_of_known_areas[k1]['array'][:, -1]
 
@@ -262,6 +265,8 @@ def prepare_ata_known_areas(list_of_points_of_known_areas):
 
             distances_array = calc_point_to_point_distance(points_in_base_area, points_in_other_area)
             merged = _merge_vals_and_distances(vals_in_base_area, vals_in_other_area, distances_array)
+
+            all_distances_dict[k1][k2] = merged
 
             list_of_distances_from_base[1].append([id_other, merged])
         all_distances_list.append(list_of_distances_from_base)
