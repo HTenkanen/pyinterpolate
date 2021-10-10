@@ -94,15 +94,12 @@ class AtAPoissonKriging:
             points_within_known_areas=self.known_areas_points,
             number_of_neighbours=number_of_neighbours,
             max_search_radius=max_search_radius
-        )  # {id (known), val, [known pt val, unknown pt val, distance between points], total points value]
+        )  # {id (known): 'area.value': float, 'total.value': float, 'array': np.array}
 
         self.block_to_block_smv = WeightedBlock2BlockSemivariance(semivariance_model=self.model)
 
-        key = list(self.prepared_data.keys())[0]
-
         # Calculate Average Point to Point semivariance for each area - len of dataset
-        areas_and_points = self.prepared_data[key]['array']
-        k = self.block_to_block_smv.calculate_average_semivariance(areas_and_points)
+        k = self.block_to_block_smv.calculate_average_semivariance(self.prepared_data)
         k = k.T
         k_ones = np.ones(1)[0]
         k = np.r_[k, k_ones]
